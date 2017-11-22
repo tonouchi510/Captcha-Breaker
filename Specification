@@ -1,0 +1,52 @@
+データセット
+    securimage (https://www.phpcaptcha.org/) のCAPTCHAを利用
+
+    参考URL https://qiita.com/84q/items/31cc9f0a3a3c66d91a76
+        info.csv : 格納データは左から順に
+        訓練データか、テストデータか(train / test)
+        画像の絶対パス
+        正解ラベル([A-Z]{1,5})
+        文字列(正解ラベル)の長さ(1～5)
+        歪みの大きさ(1～1.5)
+        邪魔な線の数
+
+    データセットのTensorflow対応
+        TFRecordを使用 (参考: https://www.cresco.co.jp/blog/entry/3024/)
+
+GPU周りの設定
+    Windows10でTensorflow(GPU版)をインストールする (https://qiita.com/n-yamanaka/items/784bc8d7e32cc782bcd8)
+    以下の環境をanaconda navigatorで作成
+        ・Python3.5
+        ・tensorflow-gpu
+    各種バージョン(VS, python,tensorflow,cuda,cuDNN)については逐一更新されるので、tensorflowのページで確認
+
+Tensorboard
+    ・プログラム実行してlogファイル作成
+    ・コマンド tensorboard --logdir=LOGDIR
+        LOGDIRは自分の生成したフォルダ
+
+備考
+・ミニバッチのシャッフルは、メモリ容量が足りないから今回は行っていない
+    参考(http://ykicisk.hatenablog.com/entry/2016/12/18/184840)
+・文字列CAPTCHAの安全性機能については論文まとめスライドに掲載
+
+プログラム設計
+・文字の傾き
+    →文字の分散を見て正規化
+    →Jなど、正規化すると元Jも向きもずれてしまうものはその処理後のずれたものとしてJを学習
+
+・線や点の除去
+	→openCVの収縮処理を利用
+	→画像自体を拡大してから収縮処理をした方がうまく切り分けられるかも
+		→文字や線の間のピクセル数が増えるため
+
+・セグメンテーション
+    →1文字だけのCaptchaを学習させる(100x100pxで切り取る)
+    ・スライディングウィンドウ方式
+        →本番Captchaを左から100x100pxごと切り取る
+    ・輪郭検出方式
+        →opencvをつかって輪郭抽出
+        →抽出したものを左から使って、ひとつずつ塗りつぶしてそれ以外を白色化
+    →切り出した画像を推定器にかける
+
+現状、たまに正解し、たいていの場合5文字中1文字ミスる
